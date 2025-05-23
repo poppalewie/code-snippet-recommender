@@ -14,3 +14,7 @@ Snippets are stored in `data/snippets.json` as a list of JSON objects with the f
 - `description`: Brief description of the snippet’s functionality.
 - `tags`: List of keywords for matching (e.g., ["sort", "list"]).
 - `code`: The code snippet as a string, with `\n` for line breaks.
+
+## Usage
+
+Run the command-line interface (CLI) to interact with the recommender

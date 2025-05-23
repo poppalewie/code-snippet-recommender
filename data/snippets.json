@@ -3,28 +3,59 @@
     "id": 1,
     "language": "python",
     "description": "Sort a list in ascending order",
-    "tags": ["sort", "list", "python"],
+    "tags": [
+      "sort",
+      "list",
+      "python"
+    ],
     "code": "def sort_list(arr):\n    return sorted(arr)"
   },
   {
     "id": 2,
     "language": "python",
     "description": "Reverse a string",
-    "tags": ["string", "reverse", "python"],
+    "tags": [
+      "string",
+      "reverse",
+      "python"
+    ],
     "code": "def reverse_string(s):\n    return s[::-1]"
   },
   {
     "id": 3,
     "language": "javascript",
     "description": "Filter even numbers from array",
-    "tags": ["array", "filter", "javascript"],
+    "tags": [
+      "array",
+      "filter",
+      "javascript"
+    ],
     "code": "function filterEvens(arr) {\n    return arr.filter(num => num % 2 === 0);\n}"
   },
   {
-  "id": 4,
-  "language": "java",
-  "description": "Find maximum element in array",
-  "tags": ["array", "max", "java"],
-  "code": "public int findMax(int[] arr) {\n    int max = arr[0];\n    for (int num : arr) {\n        if (num > max) max = num;\n    }\n    return max;\n}"
-}
+    "id": 4,
+    "language": "java",
+    "description": "Find maximum element in array",
+    "tags": [
+      "array",
+      "max",
+      "java"
+    ],
+    "code": "public int findMax(int[] arr) {\n    int max = arr[0];\n    for (int num : arr) {\n        if (num > max) max = num;\n    }\n    return max;\n}"
+  },
+  {
+    "id": 5,
+    "language": "python",
+    "description": "Read a text file line by line",
+    "tags": ["file", "io", "python"],
+    "code": "def read_file(file_path):\n    with open(file_path, 'r') as f:\n        return f.readlines()"
+  },
+  {
+    "id": 6,
+    "language": "javascript",
+    "description": "Make an HTTP GET request",
+    "tags": ["http", "api", "javascript"],
+    "code": "async function fetchData(url) {\n    const response = await fetch(url);\n    return response.json();\n}"
+  }
+  
 ]

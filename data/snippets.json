@@ -56,6 +56,13 @@
     "description": "Make an HTTP GET request",
     "tags": ["http", "api", "javascript"],
     "code": "async function fetchData(url) {\n    const response = await fetch(url);\n    return response.json();\n}"
-  }
+  },
+  {
+  "id": 7,
+  "language": "cpp",
+  "description": "Calculate factorial of a number",
+  "tags": ["factorial", "math", "cpp"],
+  "code": "int factorial(int n) {\n    if (n <= 1) return 1;\n    return n * factorial(n - 1);\n}"
+ }
   
 ]

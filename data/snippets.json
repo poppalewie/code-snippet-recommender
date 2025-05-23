@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "language": "python",
+    "description": "Sort a list in ascending order",
+    "tags": ["sort", "list", "python"],
+    "code": "def sort_list(arr):\n    return sorted(arr)"
+  },
+  {
+    "id": 2,
+    "language": "python",
+    "description": "Reverse a string",
+    "tags": ["string", "reverse", "python"],
+    "code": "def reverse_string(s):\n    return s[::-1]"
+  },
+  {
+    "id": 3,
+    "language": "javascript",
+    "description": "Filter even numbers from array",
+    "tags": ["array", "filter", "javascript"],
+    "code": "function filterEvens(arr) {\n    return arr.filter(num => num % 2 === 0);\n}"
+  }
+]

@@ -84,6 +84,13 @@
     "description": "Connect to a SQLite database",
     "tags": ["database", "sqlite", "python"],
     "code": "import sqlite3\ndef connect_db(db_name):\n    conn = sqlite3.connect(db_name)\n    return conn"
-  }
+  },
+  {
+  "id": 10,
+  "language": "sql",
+  "description": "Select records from a table",
+  "tags": ["database", "query", "sql"],
+  "code": "SELECT * FROM table_name WHERE condition;"
+ }
   
 ]

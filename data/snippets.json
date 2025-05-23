@@ -19,5 +19,12 @@
     "description": "Filter even numbers from array",
     "tags": ["array", "filter", "javascript"],
     "code": "function filterEvens(arr) {\n    return arr.filter(num => num % 2 === 0);\n}"
-  }
+  },
+  {
+  "id": 4,
+  "language": "java",
+  "description": "Find maximum element in array",
+  "tags": ["array", "max", "java"],
+  "code": "public int findMax(int[] arr) {\n    int max = arr[0];\n    for (int num : arr) {\n        if (num > max) max = num;\n    }\n    return max;\n}"
+}
 ]

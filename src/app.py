@@ -6,16 +6,39 @@ import os
 import uuid
 from glob import glob
 from datetime import datetime
+import sqlite3
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__, template_folder='/home/siwel/Documents/code-snippet-recommender/templates')
 app.secret_key = 'supersecretkey'
 recommender = CodeRecommender(snippets_file='/home/siwel/Documents/code-snippet-recommender/data/snippets.json')
 
+# Database setup
+DATABASE = '/home/siwel/Documents/code-snippet-recommender/users.db'
+
+def init_db():
+    with sqlite3.connect(DATABASE) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                username TEXT PRIMARY KEY,
+                password_hash TEXT NOT NULL
+            )
+        ''')
+        conn.commit()
+
+# Call init_db when the app starts
+init_db()
+
+def get_db_connection():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+# Set up Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-
-users = {'user1': {'password': 'pass123'}}
 
 class User(UserMixin):
     def __init__(self, username):
@@ -24,9 +47,52 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(username):
-    if username in users:
+    conn = get_db_connection()
+    user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+    conn.close()
+    if user:
         return User(username)
     return None
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if not username or not password:
+            flash('Username and password are required.', 'error')
+            return render_template('register.html')
+        
+        if len(username) < 3 or len(password) < 6:
+            flash('Username must be at least 3 characters and password at least 6 characters.', 'error')
+            return render_template('register.html')
+        
+        conn = get_db_connection()
+        existing_user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        
+        if existing_user:
+            conn.close()
+            flash('Username already exists. Please choose a different one.', 'error')
+            return render_template('register.html')
+        
+        password_hash = generate_password_hash(password)
+        try:
+            conn.execute('INSERT INTO users (username, password_hash) VALUES (?, ?)', (username, password_hash))
+            conn.commit()
+            flash('Registration successful! Please log in.', 'success')
+            return redirect(url_for('login'))
+        except sqlite3.Error as e:
+            conn.close()
+            flash(f'Registration failed: {str(e)}', 'error')
+            return render_template('register.html')
+        finally:
+            conn.close()
+    
+    return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -37,9 +103,13 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        if username in users and users[username]['password'] == password:
-            user = User(username)
-            login_user(user)
+        conn = get_db_connection()
+        user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        conn.close()
+        
+        if user and check_password_hash(user['password_hash'], password):
+            user_obj = User(username)
+            login_user(user_obj)
             flash('Logged in successfully!', 'success')
             return redirect(url_for('index'))
         else:

@@ -84,6 +84,7 @@ def index():
                 error = results['error']
                 results = []
             elif save_results and results:
+                # Save results to a user-specific directory
                 results_filename = f"results_{uuid.uuid4()}.json"
                 user_dir = os.path.join('/home/siwel/Documents/code-snippet-recommender', 'downloads', current_user.username)
                 results_path = os.path.join(user_dir, results_filename)

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Saved Results - Code Snippet Recommender</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .user-info { margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+        th { background-color: #f4f4f4; }
+        a { color: #4CAF50; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="user-info">
+        <p>Welcome, {{ current_user.username }}! <a href="{{ url_for('index') }}">Back to Recommender</a> | <a href="{{ url_for('logout') }}">Logout</a></p>
+    </div>
+
+    <h1>Your Saved Results</h1>
+    
+    {% if saved_results %}
+        <table>
+            <tr>
+                <th>Query</th>
+                <th>Language</th>
+                <th>Mode</th>
+                <th>Top K</th>
+                <th>Number of Results</th>
+                <th>Download</th>
+            </tr>
+            {% for result in saved_results %}
+                <tr>
+                    <td>{{ result.query }}</td>
+                    <td>{{ result.language }}</td>
+                    <td>{{ result.mode }}</td>
+                    <td>{{ result.top_k }}</td>
+                    <td>{{ result.num_results }}</td>
+                    <td><a href="{{ url_for('download_file', filename=result.filename) }}" download>Download</a></td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>You have no saved results yet. Perform a search and check "Save Results" to save your results.</p>
+    {% endif %}
+</body>
+</html>

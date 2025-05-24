@@ -4,20 +4,19 @@ from recommender import CodeRecommender
 import json
 import os
 import uuid
+from glob import glob
 
 app = Flask(__name__, template_folder='/home/siwel/Documents/code-snippet-recommender/templates')
-app.secret_key = 'supersecretkey'  # Required for session management (change this in production)
-recommender = CodeRecommender()
+app.secret_key = 'supersecretkey'
+recommender = CodeRecommender(snippets_file='/home/siwel/Documents/code-snippet-recommender/data/snippets.json')
 
 # Set up Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login'  # Redirect unauthenticated users to the login page
+login_manager.login_view = 'login'
 
-# Simple user storage (in-memory dictionary for demo purposes)
-users = {'user1': {'password': 'pass123'}}  # Username: user1, Password: pass123
+users = {'user1': {'password': 'pass123'}}
 
-# User model for Flask-Login
 class User(UserMixin):
     def __init__(self, username):
         self.id = username
@@ -56,7 +55,7 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route('/', methods=['GET', 'POST'])
-@login_required  # Protect this route
+@login_required
 def index():
     results = []
     error = None
@@ -86,14 +85,19 @@ def index():
                 results = []
             elif save_results and results:
                 results_filename = f"results_{uuid.uuid4()}.json"
-                results_path = os.path.join('/home/siwel/Documents/code-snippet-recommender', 'downloads', results_filename)
-                os.makedirs(os.path.dirname(results_path), exist_ok=True)
+                user_dir = os.path.join('/home/siwel/Documents/code-snippet-recommender', 'downloads', current_user.username)
+                results_path = os.path.join(user_dir, results_filename)
+                os.makedirs(user_dir, exist_ok=True)
                 with open(results_path, 'w') as f:
                     json.dump([{
                         "score": result["score"],
                         "language": result["snippet"]["language"],
                         "description": result["snippet"]["description"],
-                        "code": result["snippet"]["code"]
+                        "code": result["snippet"]["code"],
+                        "query": query,
+                        "language_filter": language,
+                        "mode": mode,
+                        "top_k": top_k
                     } for result in results], f, indent=4)
     
     return render_template('index.html', results=results, error=error,
@@ -103,8 +107,31 @@ def index():
 @app.route('/download/<filename>')
 @login_required
 def download_file(filename):
-    file_path = os.path.join('/home/siwel/Documents/code-snippet-recommender', 'downloads', filename)
+    file_path = os.path.join('/home/siwel/Documents/code-snippet-recommender', 'downloads', current_user.username, filename)
     return send_file(file_path, as_attachment=True)
+
+@app.route('/saved_results')
+@login_required
+def saved_results():
+    user_dir = os.path.join('/home/siwel/Documents/code-snippet-recommender', 'downloads', current_user.username)
+    saved_files = glob(os.path.join(user_dir, "results_*.json"))
+    saved_results = []
+    
+    for file_path in saved_files:
+        with open(file_path, 'r') as f:
+            results = json.load(f)
+            if results:
+                metadata = {
+                    "filename": os.path.basename(file_path),
+                    "query": results[0].get("query", "Unknown"),
+                    "language": results[0].get("language_filter", "Any"),
+                    "mode": results[0].get("mode", "Unknown"),
+                    "top_k": results[0].get("top_k", "Unknown"),
+                    "num_results": len(results)
+                }
+                saved_results.append(metadata)
+    
+    return render_template('saved_results.html', saved_results=saved_results)
 
 if __name__ == '__main__':
     app.run(debug=True)

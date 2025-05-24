@@ -30,8 +30,7 @@ class TestCodeRecommender(unittest.TestCase):
     def test_tfidf_recommendation(self):
         result = self.recommender.recommend("test", language="python", mode="tfidf", top_k=2)
         self.assertEqual(len(result), 1, "Should return 1 result for TF-IDF mode")
-
-    # Add other test methods as needed...
+        self.assertEqual(result[0]['snippet']['language'], "python", "Snippet language should be python")
 
 if __name__ == "__main__":
     unittest.main()

@@ -173,7 +173,40 @@ def search_history():
     if os.path.exists(history_file):
         with open(history_file, 'r') as f:
             history = json.load(f)
-    return render_template('search_history.html', history=history)
+    
+    # Get sorting and filtering parameters
+    sort_by = request.args.get('sort_by', 'timestamp_desc')
+    filter_language = request.args.get('filter_language', '').strip().lower() or None
+    filter_mode = request.args.get('filter_mode', '').strip().lower() or None
+    
+    # Apply filtering
+    filtered_history = history
+    if filter_language:
+        filtered_history = [entry for entry in filtered_history if entry['language'] and entry['language'].lower() == filter_language]
+    if filter_mode:
+        filtered_history = [entry for entry in filtered_history if entry['mode'].lower() == filter_mode]
+    
+    # Apply sorting
+    if sort_by == 'timestamp_asc':
+        filtered_history.sort(key=lambda x: x['timestamp'])
+    elif sort_by == 'timestamp_desc':
+        filtered_history.sort(key=lambda x: x['timestamp'], reverse=True)
+    elif sort_by == 'query_asc':
+        filtered_history.sort(key=lambda x: x['query'].lower())
+    elif sort_by == 'query_desc':
+        filtered_history.sort(key=lambda x: x['query'].lower(), reverse=True)
+    elif sort_by == 'num_results_asc':
+        filtered_history.sort(key=lambda x: x['num_results'])
+    elif sort_by == 'num_results_desc':
+        filtered_history.sort(key=lambda x: x['num_results'], reverse=True)
+    
+    # Get unique languages and modes for filter dropdowns
+    languages = sorted(set(entry['language'].lower() for entry in history if entry['language']))
+    modes = sorted(set(entry['mode'].lower() for entry in history))
+    
+    return render_template('search_history.html', history=filtered_history, sort_by=sort_by,
+                         filter_language=filter_language, filter_mode=filter_mode,
+                         languages=languages, modes=modes)
 
 @app.route('/clear_search_history', methods=['POST'])
 @login_required

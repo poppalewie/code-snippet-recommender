@@ -14,6 +14,9 @@
         .success { color: green; }
         .clear-button { background-color: #ff4444; color: white; border: none; padding: 10px 20px; cursor: pointer; margin-top: 10px; }
         .clear-button:hover { background-color: #cc0000; }
+        .filter-form { margin-bottom: 20px; }
+        .filter-form label { display: inline-block; width: 150px; }
+        .filter-form select, .filter-form input { margin-right: 10px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -30,6 +33,38 @@
             {% endfor %}
         {% endif %}
     {% endwith %}
+    
+    <div class="filter-form">
+        <form method="GET" action="{{ url_for('search_history') }}">
+            <label for="sort_by">Sort By:</label>
+            <select id="sort_by" name="sort_by">
+                <option value="timestamp_desc" {% if sort_by == 'timestamp_desc' %}selected{% endif %}>Timestamp (Newest First)</option>
+                <option value="timestamp_asc" {% if sort_by == 'timestamp_asc' %}selected{% endif %}>Timestamp (Oldest First)</option>
+                <option value="query_asc" {% if sort_by == 'query_asc' %}selected{% endif %}>Query (A-Z)</option>
+                <option value="query_desc" {% if sort_by == 'query_desc' %}selected{% endif %}>Query (Z-A)</option>
+                <option value="num_results_asc" {% if sort_by == 'num_results_asc' %}selected{% endif %}>Number of Results (Low to High)</option>
+                <option value="num_results_desc" {% if sort_by == 'num_results_desc' %}selected{% endif %}>Number of Results (High to Low)</option>
+            </select>
+            
+            <label for="filter_language">Filter Language:</label>
+            <select id="filter_language" name="filter_language">
+                <option value="" {% if not filter_language %}selected{% endif %}>All Languages</option>
+                {% for lang in languages %}
+                    <option value="{{ lang }}" {% if filter_language == lang %}selected{% endif %}>{{ lang | capitalize }}</option>
+                {% endfor %}
+            </select>
+            
+            <label for="filter_mode">Filter Mode:</label>
+            <select id="filter_mode" name="filter_mode">
+                <option value="" {% if not filter_mode %}selected{% endif %}>All Modes</option>
+                {% for mode in modes %}
+                    <option value="{{ mode }}" {% if filter_mode == mode %}selected{% endif %}>{{ mode | capitalize }}</option>
+                {% endfor %}
+            </select>
+            
+            <input type="submit" value="Apply">
+        </form>
+    </div>
     
     {% if history %}
         <form method="POST" action="{{ url_for('clear_search_history') }}" onsubmit="return confirm('Are you sure you want to clear your search history? This action cannot be undone.');">

@@ -7,12 +7,22 @@
         .form-container { margin-bottom: 20px; }
         .result { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
         .error { color: red; }
+        .success { color: green; }
         label { display: inline-block; width: 150px; }
         input, select { margin-bottom: 10px; }
         pre { background: #f4f4f4; padding: 10px; }
+        .user-info { margin-bottom: 20px; }
     </style>
 </head>
 <body>
+    <div class="user-info">
+        {% if current_user.is_authenticated %}
+            <p>Welcome, {{ current_user.username }}! <a href="{{ url_for('logout') }}">Logout</a></p>
+        {% else %}
+            <p><a href="{{ url_for('login') }}">Login</a></p>
+        {% endif %}
+    </div>
+
     <h1>Code Snippet Recommender</h1>
     <div class="form-container">
         <form method="POST">
@@ -38,9 +48,13 @@
         </form>
     </div>
     
-    {% if error %}
-        <p class="error">{{ error }}</p>
-    {% endif %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <p class="{{ category }}">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
     
     {% if results %}
         <h2>Results</h2>

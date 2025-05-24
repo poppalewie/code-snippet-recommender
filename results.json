@@ -1,0 +1,26 @@
+[
+    {
+        "id": 9,
+        "language": "python",
+        "description": "Connect to a SQLite database",
+        "tags": [
+            "database",
+            "sqlite",
+            "python"
+        ],
+        "code": "import sqlite3\ndef connect_db(db_name):\n    conn = sqlite3.connect(db_name)\n    return conn",
+        "score": 0.6779673099517822
+    },
+    {
+        "id": 5,
+        "language": "python",
+        "description": "Read a text file line by line",
+        "tags": [
+            "file",
+            "io",
+            "python"
+        ],
+        "code": "def read_file(file_path):\n    with open(file_path, 'r') as f:\n        return f.readlines()",
+        "score": 0.03531587868928909
+    }
+]

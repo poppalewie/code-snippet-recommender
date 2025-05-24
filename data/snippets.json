@@ -86,11 +86,39 @@
     "code": "import sqlite3\ndef connect_db(db_name):\n    conn = sqlite3.connect(db_name)\n    return conn"
   },
   {
-  "id": 10,
-  "language": "sql",
-  "description": "Select records from a table",
-  "tags": ["database", "query", "sql"],
-  "code": "SELECT * FROM table_name WHERE condition;"
- }
+    "id": 10,
+    "language": "go",
+    "description": "Make an HTTP GET request",
+    "tags": ["http", "api", "go"],
+    "code": "package main\nimport \"net/http\"\nfunc getRequest(url string) (*http.Response, error) {\n    return http.Get(url)\n}"
+  },
+  {
+    "id": 11,
+    "language": "sql",
+    "description": "Join two tables",
+    "tags": ["database", "join", "sql"],
+    "code": "SELECT * FROM table1 INNER JOIN table2 ON table1.id = table2.id;"
+  },
+  {
+    "id": 12,
+    "language": "python",
+    "description": "Scrape a webpage using BeautifulSoup",
+    "tags": ["web", "scraping", "python"],
+    "code": "from bs4 import BeautifulSoup\nimport requests\ndef scrape_page(url):\n    response = requests.get(url)\n    return BeautifulSoup(response.text, 'html.parser')"
+  },
+  {
+    "id": 13,
+    "language": "javascript",
+    "description": "Implement quicksort algorithm",
+    "tags": ["sort", "algorithm", "javascript"],
+    "code": "function quickSort(arr) {\n    if (arr.length <= 1) return arr;\n    const pivot = arr[0];\n    const left = [], right = [];\n    for (let i = 1; i < arr.length; i++) {\n        arr[i] < pivot ? left.push(arr[i]) : right.push(arr[i]);\n    }\n    return [...quickSort(left), pivot, ...quickSort(right)];\n}"
+  },
+  {
+    "id": 14,
+    "language": "cpp",
+    "description": "Reverse a linked list",
+    "tags": ["linked list", "reverse", "cpp"],
+    "code": "struct ListNode {\n    int val;\n    ListNode* next;\n};\nListNode* reverseList(ListNode* head) {\n    ListNode *prev = nullptr, *curr = head;\n    while (curr) {\n        ListNode* next = curr->next;\n        curr->next = prev;\n        prev = curr;\n        curr = next;\n    }\n    return prev;\n}"
+  }
   
 ]

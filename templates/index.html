@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Code Snippet Recommender</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .form-container { margin-bottom: 20px; }
+        .result { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+        .error { color: red; }
+        label { display: inline-block; width: 150px; }
+        input, select { margin-bottom: 10px; }
+        pre { background: #f4f4f4; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Code Snippet Recommender</h1>
+    <div class="form-container">
+        <form method="POST">
+            <label for="query">Query:</label>
+            <input type="text" id="query" name="query" value="{{ query or '' }}" required>
+            <br>
+            <label for="language">Language (optional):</label>
+            <input type="text" id="language" name="language" value="{{ language or '' }}">
+            <br>
+            <label for="mode">Mode:</label>
+            <select id="mode" name="mode">
+                <option value="tfidf" {% if mode == 'tfidf' %}selected{% endif %}>TF-IDF</option>
+                <option value="embeddings" {% if mode == 'embeddings' %}selected{% endif %}>Embeddings</option>
+            </select>
+            <br>
+            <label for="top_k">Number of Results:</label>
+            <input type="number" id="top_k" name="top_k" value="{{ top_k }}" min="1" required>
+            <br>
+            <input type="submit" value="Search">
+        </form>
+    </div>
+    
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+    
+    {% if results %}
+        <h2>Results</h2>
+        {% for result in results %}
+            <div class="result">
+                <p><strong>Score:</strong> {{ result.score|round(4) }}</p>
+                <p><strong>Language:</strong> {{ result.snippet.language }}</p>
+                <p><strong>Description:</strong> {{ result.snippet.description }}</p>
+                <p><strong>Code:</strong></p>
+                <pre>{{ result.snippet.code }}</pre>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No results yet. Enter a query above.</p>
+    {% endif %}
+</body>
+</html>

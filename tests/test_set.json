@@ -1,0 +1,17 @@
+[
+    {
+        "query": "sort list",
+        "language": "python",
+        "relevant_ids": [1, 13]
+    },
+    {
+        "query": "array operations",
+        "language": "javascript",
+        "relevant_ids": [2, 4, 8, 10]
+    },
+    {
+        "query": "fibonacci sequence",
+        "language": "python",
+        "relevant_ids": [9]
+    }
+]

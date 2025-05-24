@@ -70,3 +70,40 @@ Tested the TF-IDF recommender with various queries to evaluate performance.
 - Scores are higher in embeddings mode for relevant matches.
 - TF-IDF remains faster but less accurate for non-exact matches.
 
+# Evaluation of Code Snippet Recommender
+
+## Quantitative Evaluation
+
+We evaluated the `CodeRecommender` system using precision@K and recall@K metrics for both TF-IDF and Embeddings modes. The evaluation was performed on a test set of 3 queries with known relevant snippets, using K=3.
+
+### Test Set
+- **Query 1**: "sort list" (Python)
+  - Relevant Snippets: IDs 1, 13
+- **Query 2**: "array operations" (Javascript)
+  - Relevant Snippets: IDs 2, 4, 8, 10
+- **Query 3**: "fibonacci sequence" (Python)
+  - Relevant Snippets: ID 9
+
+### Results
+
+#### TF-IDF Mode
+- **Query 1 ("sort list")**: Precision@3: 0.667, Recall@3: 1.000
+- **Query 2 ("array operations")**: Precision@3: 1.000, Recall@3: 0.750
+- **Query 3 ("fibonacci sequence")**: Precision@3: 0.333, Recall@3: 1.000
+- **Average Precision@3**: 0.667
+- **Average Recall@3**: 0.917
+
+#### Embeddings Mode
+- **Query 1 ("sort list")**: Precision@3: 0.667, Recall@3: 1.000
+- **Query 2 ("array operations")**: Precision@3: 1.000, Recall@3: 0.750
+- **Query 3 ("fibonacci sequence")**: Precision@3: 0.333, Recall@3: 1.000
+- **Average Precision@3**: 0.667
+- **Average Recall@3**: 0.917
+
+### Analysis
+Both TF-IDF and Embeddings modes performed similarly on this test set, with an average Precision@3 of 0.667 and Recall@3 of 0.917. The Embeddings mode did not show a significant improvement over TF-IDF, possibly due to the small dataset size (14 snippets) and the simplicity of the queries. For "array operations," both modes retrieved highly relevant snippets, achieving perfect precision. However, for "fibonacci sequence," both modes retrieved some irrelevant snippets, lowering precision.
+
+### Future Improvements
+- Expand the dataset with more diverse snippets to better differentiate TF-IDF and Embeddings performance.
+- Test with a larger test set and vary K (e.g., K=5, K=10).
+- Incorporate user feedback to refine relevance judgments.

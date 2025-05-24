@@ -10,6 +10,10 @@
         th { background-color: #f4f4f4; }
         a { color: #4CAF50; text-decoration: none; }
         a:hover { text-decoration: underline; }
+        .error { color: red; }
+        .success { color: green; }
+        .clear-button { background-color: #ff4444; color: white; border: none; padding: 10px 20px; cursor: pointer; margin-top: 10px; }
+        .clear-button:hover { background-color: #cc0000; }
     </style>
 </head>
 <body>
@@ -19,7 +23,18 @@
 
     <h1>Your Search History</h1>
     
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <p class="{{ category }}">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
     {% if history %}
+        <form method="POST" action="{{ url_for('clear_search_history') }}" onsubmit="return confirm('Are you sure you want to clear your search history? This action cannot be undone.');">
+            <button type="submit" class="clear-button">Clear Search History</button>
+        </form>
         <table>
             <tr>
                 <th>Timestamp</th>

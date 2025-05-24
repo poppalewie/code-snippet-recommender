@@ -10,6 +10,10 @@
         th { background-color: #f4f4f4; }
         a { color: #4CAF50; text-decoration: none; }
         a:hover { text-decoration: underline; }
+        .error { color: red; }
+        .success { color: green; }
+        button { background-color: #ff4444; color: white; border: none; padding: 5px 10px; cursor: pointer; }
+        button:hover { background-color: #cc0000; }
     </style>
 </head>
 <body>
@@ -18,6 +22,14 @@
     </div>
 
     <h1>Your Saved Results</h1>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <p class="{{ category }}">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
     
     {% if saved_results %}
         <table>
@@ -28,6 +40,7 @@
                 <th>Top K</th>
                 <th>Number of Results</th>
                 <th>Download</th>
+                <th>Action</th>
             </tr>
             {% for result in saved_results %}
                 <tr>
@@ -37,6 +50,11 @@
                     <td>{{ result.top_k }}</td>
                     <td>{{ result.num_results }}</td>
                     <td><a href="{{ url_for('download_file', filename=result.filename) }}" download>Download</a></td>
+                    <td>
+                        <form method="POST" action="{{ url_for('delete_result', filename=result.filename) }}" onsubmit="return confirm('Are you sure you want to delete this saved result?');">
+                            <button type="submit">Delete</button>
+                        </form>
+                    </td>
                 </tr>
             {% endfor %}
         </table>

@@ -84,7 +84,6 @@ def index():
                 error = results['error']
                 results = []
             else:
-                # Log the search in the user's history
                 history_dir = os.path.join('/home/siwel/Documents/code-snippet-recommender', 'history', current_user.username)
                 history_file = os.path.join(history_dir, 'history.json')
                 os.makedirs(history_dir, exist_ok=True)
@@ -105,7 +104,6 @@ def index():
                 with open(history_file, 'w') as f:
                     json.dump(history, f, indent=4)
                 
-                # Save results if requested
                 if save_results and results:
                     results_filename = f"results_{uuid.uuid4()}.json"
                     user_dir = os.path.join('/home/siwel/Documents/code-snippet-recommender', 'downloads', current_user.username)
@@ -156,6 +154,17 @@ def saved_results():
     
     return render_template('saved_results.html', saved_results=saved_results)
 
+@app.route('/delete_result/<filename>', methods=['POST'])
+@login_required
+def delete_result(filename):
+    file_path = os.path.join('/home/siwel/Documents/code-snippet-recommender', 'downloads', current_user.username, filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        flash('Saved result deleted successfully!', 'success')
+    else:
+        flash('Saved result not found.', 'error')
+    return redirect(url_for('saved_results'))
+
 @app.route('/search_history')
 @login_required
 def search_history():
@@ -165,6 +174,17 @@ def search_history():
         with open(history_file, 'r') as f:
             history = json.load(f)
     return render_template('search_history.html', history=history)
+
+@app.route('/clear_search_history', methods=['POST'])
+@login_required
+def clear_search_history():
+    history_file = os.path.join('/home/siwel/Documents/code-snippet-recommender', 'history', current_user.username, 'history.json')
+    if os.path.exists(history_file):
+        os.remove(history_file)
+        flash('Search history cleared successfully!', 'success')
+    else:
+        flash('No search history found.', 'error')
+    return redirect(url_for('search_history'))
 
 if __name__ == '__main__':
     app.run(debug=True)

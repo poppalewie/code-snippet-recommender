@@ -174,19 +174,16 @@ def search_history():
         with open(history_file, 'r') as f:
             history = json.load(f)
     
-    # Get sorting and filtering parameters
     sort_by = request.args.get('sort_by', 'timestamp_desc')
     filter_language = request.args.get('filter_language', '').strip().lower() or None
     filter_mode = request.args.get('filter_mode', '').strip().lower() or None
     
-    # Apply filtering
     filtered_history = history
     if filter_language:
         filtered_history = [entry for entry in filtered_history if entry['language'] and entry['language'].lower() == filter_language]
     if filter_mode:
         filtered_history = [entry for entry in filtered_history if entry['mode'].lower() == filter_mode]
     
-    # Apply sorting
     if sort_by == 'timestamp_asc':
         filtered_history.sort(key=lambda x: x['timestamp'])
     elif sort_by == 'timestamp_desc':
@@ -200,13 +197,22 @@ def search_history():
     elif sort_by == 'num_results_desc':
         filtered_history.sort(key=lambda x: x['num_results'], reverse=True)
     
-    # Get unique languages and modes for filter dropdowns
     languages = sorted(set(entry['language'].lower() for entry in history if entry['language']))
     modes = sorted(set(entry['mode'].lower() for entry in history))
     
     return render_template('search_history.html', history=filtered_history, sort_by=sort_by,
                          filter_language=filter_language, filter_mode=filter_mode,
                          languages=languages, modes=modes)
+
+@app.route('/export_search_history')
+@login_required
+def export_search_history():
+    history_file = os.path.join('/home/siwel/Documents/code-snippet-recommender', 'history', current_user.username, 'history.json')
+    if os.path.exists(history_file):
+        return send_file(history_file, as_attachment=True, download_name=f"search_history_{current_user.username}.json")
+    else:
+        flash('No search history found to export.', 'error')
+        return redirect(url_for('search_history'))
 
 @app.route('/clear_search_history', methods=['POST'])
 @login_required

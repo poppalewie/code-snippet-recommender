@@ -1,77 +1,86 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Code Snippet Recommender</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .form-container { margin-bottom: 20px; }
-        .result { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
-        .error { color: red; }
-        .success { color: green; }
-        label { display: inline-block; width: 150px; }
-        input, select { margin-bottom: 10px; }
-        pre { background: #f4f4f4; padding: 10px; }
-        .user-info { margin-bottom: 20px; }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <div class="user-info">
-        {% if current_user.is_authenticated %}
-            <p>Welcome, {{ current_user.username }}! <a href="{{ url_for('search_history') }}">Search History</a> | <a href="{{ url_for('saved_results') }}">Saved Results</a> | <a href="{{ url_for('logout') }}">Logout</a></p>
-        {% else %}
-            <p><a href="{{ url_for('login') }}">Login</a></p>
-        {% endif %}
-    </div>
+    <div class="container mt-4">
+        <div class="user-info mb-4">
+            {% if current_user.is_authenticated %}
+                <p>Welcome, {{ current_user.username }}! 
+                    <a href="{{ url_for('search_history') }}" class="btn btn-outline-primary btn-sm">Search History</a>
+                    <a href="{{ url_for('saved_results') }}" class="btn btn-outline-primary btn-sm">Saved Results</a>
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">Logout</a>
+                </p>
+            {% else %}
+                <p><a href="{{ url_for('login') }}" class="btn btn-primary btn-sm">Login</a></p>
+            {% endif %}
+        </div>
 
-    <h1>Code Snippet Recommender</h1>
-    <div class="form-container">
-        <form method="POST">
-            <label for="query">Query:</label>
-            <input type="text" id="query" name="query" value="{{ query or '' }}" required>
-            <br>
-            <label for="language">Language (optional):</label>
-            <input type="text" id="language" name="language" value="{{ language or '' }}">
-            <br>
-            <label for="mode">Mode:</label>
-            <select id="mode" name="mode">
-                <option value="tfidf" {% if mode == 'tfidf' %}selected{% endif %}>TF-IDF</option>
-                <option value="embeddings" {% if mode == 'embeddings' %}selected{% endif %}>Embeddings</option>
-            </select>
-            <br>
-            <label for="top_k">Number of Results:</label>
-            <input type="number" id="top_k" name="top_k" value="{{ top_k }}" min="1" required>
-            <br>
-            <label for="save_results">Save Results:</label>
-            <input type="checkbox" id="save_results" name="save_results" {% if save_results %}checked{% endif %}>
-            <br>
-            <input type="submit" value="Search">
-        </form>
-    </div>
-    
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <p class="{{ category }}">{{ message }}</p>
+        <h1>Code Snippet Recommender</h1>
+        <div class="form-container mb-4">
+            <form method="POST">
+                <div class="mb-3">
+                    <label for="query" class="form-label">Query:</label>
+                    <input type="text" class="form-control" id="query" name="query" value="{{ query or '' }}" required>
+                </div>
+                <div class="mb-3">
+                    <label for="language" class="form-label">Language (optional):</label>
+                    <input type="text" class="form-control" id="language" name="language" value="{{ language or '' }}">
+                </div>
+                <div class="mb-3">
+                    <label for="mode" class="form-label">Mode:</label>
+                    <select class="form-select" id="mode" name="mode">
+                        <option value="tfidf" {% if mode == 'tfidf' %}selected{% endif %}>TF-IDF</option>
+                        <option value="embeddings" {% if mode == 'embeddings' %}selected{% endif %}>Embeddings</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="top_k" class="form-label">Number of Results:</label>
+                    <input type="number" class="form-control" id="top_k" name="top_k" value="{{ top_k }}" min="1" required>
+                </div>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="save_results" name="save_results" {% if save_results %}checked{% endif %}>
+                    <label class="form-check-label" for="save_results">Save Results</label>
+                </div>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </form>
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% if results %}
+            <h2>Results</h2>
+            {% if save_results and results_filename %}
+                <p><a href="{{ url_for('download_file', filename=results_filename) }}" class="btn btn-success btn-sm" download>Download Results</a></p>
+            {% endif %}
+            {% for result in results %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <p><strong>Score:</strong> {{ result.score|round(4) }}</p>
+                        <p><strong>Language:</strong> {{ result.snippet['language'] }}</p>
+                        <p><strong>Description:</strong> {{ result.snippet['description'] }}</p>
+                        <p><strong>Code:</strong></p>
+                        <pre class="bg-light p-2">{{ result.snippet['code'] }}</pre>
+                    </div>
+                </div>
             {% endfor %}
+        {% else %}
+            <p>No results yet. Enter a query above.</p>
         {% endif %}
-    {% endwith %}
-    
-    {% if results %}
-        <h2>Results</h2>
-        {% if save_results and results_filename %}
-            <p><a href="{{ url_for('download_file', filename=results_filename) }}" download>Download Results</a></p>
-        {% endif %}
-        {% for result in results %}
-            <div class="result">
-                <p><strong>Score:</strong> {{ result.score|round(4) }}</p>
-                <p><strong>Language:</strong> {{ result.snippet['language'] }}</p>
-                <p><strong>Description:</strong> {{ result.snippet['description'] }}</p>
-                <p><strong>Code:</strong></p>
-                <pre>{{ result.snippet['code'] }}</pre>
-            </div>
-        {% endfor %}
-    {% else %}
-        <p>No results yet. Enter a query above.</p>
-    {% endif %}
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -1,99 +1,110 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Search History - Code Snippet Recommender</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .user-info { margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
-        th { background-color: #f4f4f4; }
-        a { color: #4CAF50; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        .error { color: red; }
-        .success { color: green; }
-        .clear-button { background-color: #ff4444; color: white; border: none; padding: 10px 20px; cursor: pointer; margin-top: 10px; }
-        .clear-button:hover { background-color: #cc0000; }
-        .filter-form { margin-bottom: 20px; }
-        .filter-form label { display: inline-block; width: 150px; }
-        .filter-form select, .filter-form input { margin-right: 10px; margin-bottom: 10px; }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <div class="user-info">
-        <p>Welcome, {{ current_user.username }}! <a href="{{ url_for('index') }}">Back to Recommender</a> | <a href="{{ url_for('saved_results') }}">Saved Results</a> | <a href="{{ url_for('logout') }}">Logout</a></p>
-    </div>
+    <div class="container mt-4">
+        <div class="user-info mb-4">
+            <p>Welcome, {{ current_user.username }}! 
+                <a href="{{ url_for('index') }}" class="btn btn-outline-primary btn-sm">Back to Recommender</a>
+                <a href="{{ url_for('saved_results') }}" class="btn btn-outline-primary btn-sm">Saved Results</a>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">Logout</a>
+            </p>
+        </div>
 
-    <h1>Your Search History</h1>
-    
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <p class="{{ category }}">{{ message }}</p>
-            {% endfor %}
+        <h1>Your Search History</h1>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <div class="filter-form mb-4">
+            <form method="GET" action="{{ url_for('search_history') }}" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="sort_by" class="form-label">Sort By:</label>
+                    <select id="sort_by" name="sort_by" class="form-select">
+                        <option value="timestamp_desc" {% if sort_by == 'timestamp_desc' %}selected{% endif %}>Timestamp (Newest First)</option>
+                        <option value="timestamp_asc" {% if sort_by == 'timestamp_asc' %}selected{% endif %}>Timestamp (Oldest First)</option>
+                        <option value="query_asc" {% if sort_by == 'query_asc' %}selected{% endif %}>Query (A-Z)</option>
+                        <option value="query_desc" {% if sort_by == 'query_desc' %}selected{% endif %}>Query (Z-A)</option>
+                        <option value="num_results_asc" {% if sort_by == 'num_results_asc' %}selected{% endif %}>Number of Results (Low to High)</option>
+                        <option value="num_results_desc" {% if sort_by == 'num_results_desc' %}selected{% endif %}>Number of Results (High to Low)</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="filter_language" class="form-label">Filter Language:</label>
+                    <select id="filter_language" name="filter_language" class="form-select">
+                        <option value="" {% if not filter_language %}selected{% endif %}>All Languages</option>
+                        {% for lang in languages %}
+                            <option value="{{ lang }}" {% if filter_language == lang %}selected{% endif %}>{{ lang | capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="filter_mode" class="form-label">Filter Mode:</label>
+                    <select id="filter_mode" name="filter_mode" class="form-select">
+                        <option value="" {% if not filter_mode %}selected{% endif %}>All Modes</option>
+                        {% for mode in modes %}
+                            <option value="{{ mode }}" {% if filter_mode == mode %}selected{% endif %}>{{ mode | capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Apply</button>
+                </div>
+            </form>
+        </div>
+        
+        {% if history %}
+            <div class="mb-3">
+                <form method="POST" action="{{ url_for('clear_search_history') }}" onsubmit="return confirm('Are you sure you want to clear your search history? This action cannot be undone.');" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Clear Search History</button>
+                </form>
+                <a href="{{ url_for('export_search_history') }}" style="display: inline;">
+                    <button type="button" class="btn btn-success ms-2">Export History</button>
+                </a>
+            </div>
+            <table class="table table-striped table-bordered">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Query</th>
+                        <th>Language</th>
+                        <th>Mode</th>
+                        <th>Top K</th>
+                        <th>Number of Results</th>
+                        <th>Saved</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in history %}
+                        <tr>
+                            <td>{{ entry.timestamp }}</td>
+                            <td>{{ entry.query }}</td>
+                            <td>{{ entry.language if entry.language else 'Any' }}</td>
+                            <td>{{ entry.mode }}</td>
+                            <td>{{ entry.top_k }}</td>
+                            <td>{{ entry.num_results }}</td>
+                            <td>{{ 'Yes' if entry.saved else 'No' }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>You have no search history yet. Perform a search to start logging your history.</p>
         {% endif %}
-    {% endwith %}
-    
-    <div class="filter-form">
-        <form method="GET" action="{{ url_for('search_history') }}">
-            <label for="sort_by">Sort By:</label>
-            <select id="sort_by" name="sort_by">
-                <option value="timestamp_desc" {% if sort_by == 'timestamp_desc' %}selected{% endif %}>Timestamp (Newest First)</option>
-                <option value="timestamp_asc" {% if sort_by == 'timestamp_asc' %}selected{% endif %}>Timestamp (Oldest First)</option>
-                <option value="query_asc" {% if sort_by == 'query_asc' %}selected{% endif %}>Query (A-Z)</option>
-                <option value="query_desc" {% if sort_by == 'query_desc' %}selected{% endif %}>Query (Z-A)</option>
-                <option value="num_results_asc" {% if sort_by == 'num_results_asc' %}selected{% endif %}>Number of Results (Low to High)</option>
-                <option value="num_results_desc" {% if sort_by == 'num_results_desc' %}selected{% endif %}>Number of Results (High to Low)</option>
-            </select>
-            
-            <label for="filter_language">Filter Language:</label>
-            <select id="filter_language" name="filter_language">
-                <option value="" {% if not filter_language %}selected{% endif %}>All Languages</option>
-                {% for lang in languages %}
-                    <option value="{{ lang }}" {% if filter_language == lang %}selected{% endif %}>{{ lang | capitalize }}</option>
-                {% endfor %}
-            </select>
-            
-            <label for="filter_mode">Filter Mode:</label>
-            <select id="filter_mode" name="filter_mode">
-                <option value="" {% if not filter_mode %}selected{% endif %}>All Modes</option>
-                {% for mode in modes %}
-                    <option value="{{ mode }}" {% if filter_mode == mode %}selected{% endif %}>{{ mode | capitalize }}</option>
-                {% endfor %}
-            </select>
-            
-            <input type="submit" value="Apply">
-        </form>
     </div>
-    
-    {% if history %}
-        <form method="POST" action="{{ url_for('clear_search_history') }}" onsubmit="return confirm('Are you sure you want to clear your search history? This action cannot be undone.');">
-            <button type="submit" class="clear-button">Clear Search History</button>
-        </form>
-        <table>
-            <tr>
-                <th>Timestamp</th>
-                <th>Query</th>
-                <th>Language</th>
-                <th>Mode</th>
-                <th>Top K</th>
-                <th>Number of Results</th>
-                <th>Saved</th>
-            </tr>
-            {% for entry in history %}
-                <tr>
-                    <td>{{ entry.timestamp }}</td>
-                    <td>{{ entry.query }}</td>
-                    <td>{{ entry.language if entry.language else 'Any' }}</td>
-                    <td>{{ entry.mode }}</td>
-                    <td>{{ entry.top_k }}</td>
-                    <td>{{ entry.num_results }}</td>
-                    <td>{{ 'Yes' if entry.saved else 'No' }}</td>
-                </tr>
-            {% endfor %}
-        </table>
-    {% else %}
-        <p>You have no search history yet. Perform a search to start logging your history.</p>
-    {% endif %}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

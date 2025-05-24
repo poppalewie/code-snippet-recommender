@@ -31,6 +31,9 @@
             <label for="top_k">Number of Results:</label>
             <input type="number" id="top_k" name="top_k" value="{{ top_k }}" min="1" required>
             <br>
+            <label for="save_results">Save Results:</label>
+            <input type="checkbox" id="save_results" name="save_results" {% if save_results %}checked{% endif %}>
+            <br>
             <input type="submit" value="Search">
         </form>
     </div>
@@ -41,13 +44,16 @@
     
     {% if results %}
         <h2>Results</h2>
+        {% if save_results and results_filename %}
+            <p><a href="{{ url_for('download_file', filename=results_filename) }}" download>Download Results</a></p>
+        {% endif %}
         {% for result in results %}
             <div class="result">
                 <p><strong>Score:</strong> {{ result.score|round(4) }}</p>
-                <p><strong>Language:</strong> {{ result.snippet.language }}</p>
-                <p><strong>Description:</strong> {{ result.snippet.description }}</p>
+                <p><strong>Language:</strong> {{ result.snippet['language'] }}</p>
+                <p><strong>Description:</strong> {{ result.snippet['description'] }}</p>
                 <p><strong>Code:</strong></p>
-                <pre>{{ result.snippet.code }}</pre>
+                <pre>{{ result.snippet['code'] }}</pre>
             </div>
         {% endfor %}
     {% else %}

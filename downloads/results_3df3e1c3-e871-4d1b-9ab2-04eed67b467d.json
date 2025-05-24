@@ -1,0 +1,8 @@
+[
+    {
+        "score": 0.8451061075298699,
+        "language": "python",
+        "description": "Sort a list in ascending order",
+        "code": "def sort_list(arr):\n    return sorted(arr)"
+    }
+]

@@ -14,7 +14,7 @@
 </head>
 <body>
     <div class="user-info">
-        <p>Welcome, {{ current_user.username }}! <a href="{{ url_for('index') }}">Back to Recommender</a> | <a href="{{ url_for('logout') }}">Logout</a></p>
+        <p>Welcome, {{ current_user.username }}! <a href="{{ url_for('index') }}">Back to Recommender</a> | <a href="{{ url_for('search_history') }}">Search History</a> | <a href="{{ url_for('logout') }}">Logout</a></p>
     </div>
 
     <h1>Your Saved Results</h1>

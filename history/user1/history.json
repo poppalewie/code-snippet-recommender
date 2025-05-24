@@ -1,0 +1,20 @@
+[
+    {
+        "timestamp": "2025-05-24 08:27:23",
+        "query": "arrayyyy",
+        "language": null,
+        "mode": "tfidf",
+        "top_k": 2,
+        "num_results": 2,
+        "saved": false
+    },
+    {
+        "timestamp": "2025-05-24 08:27:23",
+        "query": "arrayyyy",
+        "language": null,
+        "mode": "tfidf",
+        "top_k": 2,
+        "num_results": 2,
+        "saved": false
+    }
+]

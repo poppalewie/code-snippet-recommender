@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Search History - Code Snippet Recommender</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .user-info { margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+        th { background-color: #f4f4f4; }
+        a { color: #4CAF50; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="user-info">
+        <p>Welcome, {{ current_user.username }}! <a href="{{ url_for('index') }}">Back to Recommender</a> | <a href="{{ url_for('saved_results') }}">Saved Results</a> | <a href="{{ url_for('logout') }}">Logout</a></p>
+    </div>
+
+    <h1>Your Search History</h1>
+    
+    {% if history %}
+        <table>
+            <tr>
+                <th>Timestamp</th>
+                <th>Query</th>
+                <th>Language</th>
+                <th>Mode</th>
+                <th>Top K</th>
+                <th>Number of Results</th>
+                <th>Saved</th>
+            </tr>
+            {% for entry in history %}
+                <tr>
+                    <td>{{ entry.timestamp }}</td>
+                    <td>{{ entry.query }}</td>
+                    <td>{{ entry.language if entry.language else 'Any' }}</td>
+                    <td>{{ entry.mode }}</td>
+                    <td>{{ entry.top_k }}</td>
+                    <td>{{ entry.num_results }}</td>
+                    <td>{{ 'Yes' if entry.saved else 'No' }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>You have no search history yet. Perform a search to start logging your history.</p>
+    {% endif %}
+</body>
+</html>

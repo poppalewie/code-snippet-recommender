@@ -5,12 +5,12 @@ import json
 import os
 import uuid
 from glob import glob
+from datetime import datetime
 
 app = Flask(__name__, template_folder='/home/siwel/Documents/code-snippet-recommender/templates')
 app.secret_key = 'supersecretkey'
 recommender = CodeRecommender(snippets_file='/home/siwel/Documents/code-snippet-recommender/data/snippets.json')
 
-# Set up Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -83,23 +83,45 @@ def index():
             if isinstance(results, dict) and 'error' in results:
                 error = results['error']
                 results = []
-            elif save_results and results:
-                # Save results to a user-specific directory
-                results_filename = f"results_{uuid.uuid4()}.json"
-                user_dir = os.path.join('/home/siwel/Documents/code-snippet-recommender', 'downloads', current_user.username)
-                results_path = os.path.join(user_dir, results_filename)
-                os.makedirs(user_dir, exist_ok=True)
-                with open(results_path, 'w') as f:
-                    json.dump([{
-                        "score": result["score"],
-                        "language": result["snippet"]["language"],
-                        "description": result["snippet"]["description"],
-                        "code": result["snippet"]["code"],
-                        "query": query,
-                        "language_filter": language,
-                        "mode": mode,
-                        "top_k": top_k
-                    } for result in results], f, indent=4)
+            else:
+                # Log the search in the user's history
+                history_dir = os.path.join('/home/siwel/Documents/code-snippet-recommender', 'history', current_user.username)
+                history_file = os.path.join(history_dir, 'history.json')
+                os.makedirs(history_dir, exist_ok=True)
+                search_entry = {
+                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'query': query,
+                    'language': language,
+                    'mode': mode,
+                    'top_k': top_k,
+                    'num_results': len(results),
+                    'saved': save_results
+                }
+                history = []
+                if os.path.exists(history_file):
+                    with open(history_file, 'r') as f:
+                        history = json.load(f)
+                history.append(search_entry)
+                with open(history_file, 'w') as f:
+                    json.dump(history, f, indent=4)
+                
+                # Save results if requested
+                if save_results and results:
+                    results_filename = f"results_{uuid.uuid4()}.json"
+                    user_dir = os.path.join('/home/siwel/Documents/code-snippet-recommender', 'downloads', current_user.username)
+                    results_path = os.path.join(user_dir, results_filename)
+                    os.makedirs(user_dir, exist_ok=True)
+                    with open(results_path, 'w') as f:
+                        json.dump([{
+                            "score": result["score"],
+                            "language": result["snippet"]["language"],
+                            "description": result["snippet"]["description"],
+                            "code": result["snippet"]["code"],
+                            "query": query,
+                            "language_filter": language,
+                            "mode": mode,
+                            "top_k": top_k
+                        } for result in results], f, indent=4)
     
     return render_template('index.html', results=results, error=error,
                          query=query, language=language, mode=mode, top_k=top_k or '2',
@@ -133,6 +155,16 @@ def saved_results():
                 saved_results.append(metadata)
     
     return render_template('saved_results.html', saved_results=saved_results)
+
+@app.route('/search_history')
+@login_required
+def search_history():
+    history_file = os.path.join('/home/siwel/Documents/code-snippet-recommender', 'history', current_user.username, 'history.json')
+    history = []
+    if os.path.exists(history_file):
+        with open(history_file, 'r') as f:
+            history = json.load(f)
+    return render_template('search_history.html', history=history)
 
 if __name__ == '__main__':
     app.run(debug=True)

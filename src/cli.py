@@ -4,7 +4,8 @@ def main():
     recommender = CodeRecommender()
     print("Welcome to the Code Snippet Recommender!")
     print("Enter a query (e.g., 'sort list in python') or 'quit' to exit.")
-    print("Optionally, specify a language (e.g., 'python') after the query with a colon (e.g., 'sort list:python').")
+    print("Optionally, add :language:mode (e.g., 'sort list:python:embeddings').")
+    print("Modes: 'tfidf' (default), 'embeddings'.")
     
     while True:
         user_input = input("\nQuery: ")
@@ -14,12 +15,16 @@ def main():
             print("Please enter a valid query.")
             continue
             
-        # Split input into query and language (if provided)
-        query, language = user_input, None
-        if ':' in user_input:
-            query, language = [part.strip() for part in user_input.split(':', 1)]
-            
-        results = recommender.recommend(query, language=language)
+        # Split input into query, language, mode
+        parts = user_input.split(':')
+        query = parts[0].strip()
+        language = parts[1].strip() if len(parts) > 1 else None
+        mode = parts[2].strip() if len(parts) > 2 else 'tfidf'
+        
+        results = recommender.recommend(query, language=language, mode=mode)
+        if isinstance(results, dict) and 'error' in results:
+            print(results['error'])
+            continue
         if not results:
             print(f"No matching snippets found{' for language ' + language if language else ''}.")
             continue

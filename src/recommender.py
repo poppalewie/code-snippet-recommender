@@ -6,14 +6,18 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 import string
+from sentence_transformers import SentenceTransformer
+import numpy as np
 
 class CodeRecommender:
     def __init__(self, snippets_file="data/snippets.json"):
         self.snippets = load_snippets(snippets_file)
         self.vectorizer = TfidfVectorizer()
         self.lemmatizer = WordNetLemmatizer()
+        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
         self.documents = self._prepare_documents()
         self.tfidf_matrix = self._fit_vectorizer()
+        self.embedding_matrix = self._fit_embeddings()
 
     def _prepare_documents(self):
         stop_words = set(stopwords.words('english'))
@@ -29,6 +33,10 @@ class CodeRecommender:
     def _fit_vectorizer(self):
         return self.vectorizer.fit_transform(self.documents)
 
+    def _fit_embeddings(self):
+        # Generate embeddings for documents
+        return self.embedding_model.encode(self.documents, convert_to_numpy=True)
+
     def _preprocess_query(self, query):
         stop_words = set(stopwords.words('english'))
         tokens = word_tokenize(query.lower())
@@ -39,30 +47,37 @@ class CodeRecommender:
         ]
         return ' '.join(tokens)
 
-    def recommend(self, query, top_k=2, language=None):
+    def recommend(self, query, top_k=2, language=None, mode='tfidf'):
+        if mode not in ['tfidf', 'embeddings']:
+            return {'error': f"Invalid mode '{mode}'. Use 'tfidf' or 'embeddings'."}
+            
         processed_query = self._preprocess_query(query)
-        query_vector = self.vectorizer.transform([processed_query])
         
         # Filter snippets by language if specified
+        available_languages = sorted(set(s['language'].lower() for s in self.snippets))
         if language:
             language = language.lower()
+            if language not in available_languages:
+                return {'error': f"Language '{language}' not found. Available: {', '.join(available_languages)}"}
             indices = [i for i, s in enumerate(self.snippets) if s['language'].lower() == language]
             if not indices:
-                return []  # No snippets in the specified language
-            filtered_matrix = self.tfidf_matrix[indices]
+                return []
             filtered_snippets = [self.snippets[i] for i in indices]
         else:
             indices = list(range(len(self.snippets)))
-            filtered_matrix = self.tfidf_matrix
             filtered_snippets = self.snippets
 
-        # Compute cosine similarity
+        if mode == 'tfidf':
+            query_vector = self.vectorizer.transform([processed_query])
+            filtered_matrix = self.tfidf_matrix[indices]
+        else:  # mode == 'embeddings'
+            query_vector = self.embedding_model.encode([processed_query], convert_to_numpy=True)
+            filtered_matrix = self.embedding_matrix[indices]
+
         similarities = cosine_similarity(query_vector, filtered_matrix).flatten()
-        # Get top-k indices
         top_indices = similarities.argsort()[-top_k:][::-1]
-        # Return matching snippets with scores
         return [
             {'snippet': filtered_snippets[i], 'score': similarities[i]}
             for i in top_indices
-            if similarities[i] > 0  # Only return non-zero similarity results
+            if similarities[i] > 0
         ]

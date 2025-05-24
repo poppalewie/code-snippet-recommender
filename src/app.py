@@ -8,6 +8,7 @@ from glob import glob
 from datetime import datetime
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
+from math import ceil
 
 app = Flask(__name__, template_folder='/home/siwel/Documents/code-snippet-recommender/templates')
 app.secret_key = 'supersecretkey'
@@ -222,7 +223,17 @@ def saved_results():
                 }
                 saved_results.append(metadata)
     
-    return render_template('saved_results.html', saved_results=saved_results)
+    # Pagination for saved results
+    ITEMS_PER_PAGE = 10
+    page = request.args.get('page', 1, type=int)
+    total_items = len(saved_results)
+    total_pages = ceil(total_items / ITEMS_PER_PAGE)
+    start = (page - 1) * ITEMS_PER_PAGE
+    end = start + ITEMS_PER_PAGE
+    paginated_results = saved_results[start:end]
+    
+    return render_template('saved_results.html', saved_results=paginated_results,
+                         page=page, total_pages=total_pages)
 
 @app.route('/delete_result/<filename>', methods=['POST'])
 @login_required
@@ -267,12 +278,22 @@ def search_history():
     elif sort_by == 'num_results_desc':
         filtered_history.sort(key=lambda x: x['num_results'], reverse=True)
     
+    # Pagination for search history
+    ITEMS_PER_PAGE = 10
+    page = request.args.get('page', 1, type=int)
+    total_items = len(filtered_history)
+    total_pages = ceil(total_items / ITEMS_PER_PAGE)
+    start = (page - 1) * ITEMS_PER_PAGE
+    end = start + ITEMS_PER_PAGE
+    paginated_history = filtered_history[start:end]
+    
     languages = sorted(set(entry['language'].lower() for entry in history if entry['language']))
     modes = sorted(set(entry['mode'].lower() for entry in history))
     
-    return render_template('search_history.html', history=filtered_history, sort_by=sort_by,
+    return render_template('search_history.html', history=paginated_history, sort_by=sort_by,
                          filter_language=filter_language, filter_mode=filter_mode,
-                         languages=languages, modes=modes)
+                         languages=languages, modes=modes,
+                         page=page, total_pages=total_pages)
 
 @app.route('/export_search_history')
 @login_required

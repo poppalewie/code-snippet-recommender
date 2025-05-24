@@ -101,6 +101,28 @@
                     {% endfor %}
                 </tbody>
             </table>
+            <!-- Pagination Controls -->
+            {% if total_pages > 1 %}
+                <nav aria-label="Search history pagination">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('search_history', page=page-1, sort_by=sort_by, filter_language=filter_language, filter_mode=filter_mode) }}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo; Previous</span>
+                            </a>
+                        </li>
+                        {% for p in range(1, total_pages + 1) %}
+                            <li class="page-item {% if p == page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('search_history', page=p, sort_by=sort_by, filter_language=filter_language, filter_mode=filter_mode) }}">{{ p }}</a>
+                            </li>
+                        {% endfor %}
+                        <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('search_history', page=page+1, sort_by=sort_by, filter_language=filter_language, filter_mode=filter_mode) }}" aria-label="Next">
+                                <span aria-hidden="true">Next &raquo;</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            {% endif %}
         {% else %}
             <p>You have no search history yet. Perform a search to start logging your history.</p>
         {% endif %}

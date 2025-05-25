@@ -5,11 +5,12 @@ import json
 import os
 import uuid
 from glob import glob
-from datetime import datetime
+from datetime import datetime, timedelta
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 from math import ceil
 from collections import Counter
+import shutil
 
 app = Flask(__name__, template_folder='/home/siwel/Documents/code-snippet-recommender/templates')
 app.secret_key = 'supersecretkey'
@@ -31,11 +32,37 @@ def init_db():
             cursor.execute('ALTER TABLE users ADD COLUMN created_at TEXT')
         except sqlite3.OperationalError:
             pass
+        try:
+            cursor.execute('ALTER TABLE users ADD COLUMN theme_preference TEXT')
+        except sqlite3.OperationalError:
+            pass
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                username TEXT NOT NULL,
+                token TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                PRIMARY KEY (username, token),
+                FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS login_attempts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                attempt_time TEXT NOT NULL,
+                FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+            )
+        ''')
         cursor.execute('''
             UPDATE users
             SET created_at = ?
             WHERE created_at IS NULL
         ''', (datetime.now().strftime('%Y-%m-%d %H:%M:%S'),))
+        cursor.execute('''
+            UPDATE users
+            SET theme_preference = ?
+            WHERE theme_preference IS NULL
+        ''', ('light',))
         conn.commit()
 
 # Call init_db when the app starts
@@ -65,6 +92,153 @@ def load_user(username):
         return User(username)
     return None
 
+def get_user_theme():
+    if current_user.is_authenticated:
+        conn = get_db_connection()
+        user = conn.execute('SELECT theme_preference FROM users WHERE username = ?', (current_user.username,)).fetchone()
+        conn.close()
+        return user['theme_preference'] if user else 'light'
+    return 'light'
+
+def check_login_attempts(username):
+    conn = get_db_connection()
+    try:
+        # Define rate limiting parameters
+        ATTEMPT_LIMIT = 5
+        TIME_WINDOW_MINUTES = 15
+        
+        # Calculate the time window (last 15 minutes)
+        time_threshold = (datetime.now() - timedelta(minutes=TIME_WINDOW_MINUTES)).strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Get failed login attempts within the time window
+        attempts = conn.execute('''
+            SELECT COUNT(*) as attempt_count, MIN(attempt_time) as first_attempt
+            FROM login_attempts
+            WHERE username = ? AND attempt_time >= ?
+        ''', (username, time_threshold)).fetchone()
+        
+        attempt_count = attempts['attempt_count']
+        first_attempt = attempts['first_attempt']
+        
+        if attempt_count >= ATTEMPT_LIMIT:
+            # Calculate when the lockout will expire (15 minutes after the first failed attempt)
+            if first_attempt:
+                first_attempt_time = datetime.strptime(first_attempt, '%Y-%m-%d %H:%M:%S')
+                reset_time = first_attempt_time + timedelta(minutes=TIME_WINDOW_MINUTES)
+                if datetime.now() < reset_time:
+                    remaining_seconds = (reset_time - datetime.now()).total_seconds()
+                    minutes = int(remaining_seconds // 60)
+                    seconds = int(remaining_seconds % 60)
+                    return False, f"Too many login attempts. Please try again in {minutes} minute(s) and {seconds} second(s)."
+                else:
+                    # Reset attempts if the lockout period has expired
+                    conn.execute('DELETE FROM login_attempts WHERE username = ? AND attempt_time < ?', 
+                               (username, time_threshold))
+                    conn.commit()
+                    return True, None
+        return True, None
+    finally:
+        conn.close()
+
+def log_failed_login_attempt(username):
+    conn = get_db_connection()
+    try:
+        attempt_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        conn.execute('INSERT INTO login_attempts (username, attempt_time) VALUES (?, ?)', 
+                    (username, attempt_time))
+        conn.commit()
+    finally:
+        conn.close()
+
+def generate_reset_token(username):
+    token = str(uuid.uuid4())
+    expires_at = (datetime.now() + timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')
+    conn = get_db_connection()
+    try:
+        conn.execute('INSERT INTO password_reset_tokens (username, token, expires_at) VALUES (?, ?, ?)',
+                     (username, token, expires_at))
+        conn.commit()
+    finally:
+        conn.close()
+    return token
+
+def validate_reset_token(token):
+    conn = get_db_connection()
+    try:
+        token_data = conn.execute('SELECT * FROM password_reset_tokens WHERE token = ?', (token,)).fetchone()
+        if not token_data:
+            return None, "Invalid or expired token."
+        expires_at = datetime.strptime(token_data['expires_at'], '%Y-%m-%d %H:%M:%S')
+        if datetime.now() > expires_at:
+            conn.execute('DELETE FROM password_reset_tokens WHERE token = ?', (token,))
+            conn.commit()
+            return None, "Token has expired."
+        return token_data['username'], None
+    finally:
+        conn.close()
+
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        conn = get_db_connection()
+        user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        conn.close()
+        
+        if not user:
+            flash('Username not found.', 'error')
+            return render_template('forgot_password.html', theme='light')
+        
+        token = generate_reset_token(username)
+        reset_link = url_for('reset_password', token=token, _external=True)
+        flash(f'Password reset link (simulated email): {reset_link}', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('forgot_password.html', theme='light')
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    username, error = validate_reset_token(token)
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        
+        if not new_password or not confirm_password:
+            flash('All fields are required.', 'error')
+            return render_template('reset_password.html', token=token, theme='light')
+        if new_password != confirm_password:
+            flash('Passwords do not match.', 'error')
+            return render_template('reset_password.html', token=token, theme='light')
+        if len(new_password) < 6:
+            flash('Password must be at least 6 characters.', 'error')
+            return render_template('reset_password.html', token=token, theme='light')
+        
+        conn = get_db_connection()
+        try:
+            password_hash = generate_password_hash(new_password)
+            conn.execute('UPDATE users SET password_hash = ? WHERE username = ?', (password_hash, username))
+            conn.execute('DELETE FROM password_reset_tokens WHERE token = ?', (token,))
+            conn.commit()
+            flash('Password reset successfully! Please log in.', 'success')
+            return redirect(url_for('login'))
+        except sqlite3.Error as e:
+            flash(f'Failed to reset password: {str(e)}', 'error')
+            return render_template('reset_password.html', token=token, theme='light')
+        finally:
+            conn.close()
+    
+    return render_template('reset_password.html', token=token, theme='light')
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
@@ -76,11 +250,11 @@ def register():
         
         if not username or not password:
             flash('Username and password are required.', 'error')
-            return render_template('register.html')
+            return render_template('register.html', theme='light')
         
         if len(username) < 3 or len(password) < 6:
             flash('Username must be at least 3 characters and password at least 6 characters.', 'error')
-            return render_template('register.html')
+            return render_template('register.html', theme='light')
         
         conn = get_db_connection()
         existing_user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
@@ -88,24 +262,24 @@ def register():
         if existing_user:
             conn.close()
             flash('Username already exists. Please choose a different one.', 'error')
-            return render_template('register.html')
+            return render_template('register.html', theme='light')
         
         password_hash = generate_password_hash(password)
         created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         try:
-            conn.execute('INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)', 
-                       (username, password_hash, created_at))
+            conn.execute('INSERT INTO users (username, password_hash, created_at, theme_preference) VALUES (?, ?, ?, ?)', 
+                       (username, password_hash, created_at, 'light'))
             conn.commit()
             flash('Registration successful! Please log in.', 'success')
             return redirect(url_for('login'))
         except sqlite3.Error as e:
             conn.close()
             flash(f'Registration failed: {str(e)}', 'error')
-            return render_template('register.html')
+            return render_template('register.html', theme='light')
         finally:
             conn.close()
     
-    return render_template('register.html')
+    return render_template('register.html', theme='light')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -116,19 +290,32 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
+        # Check rate limiting
+        can_attempt, error_message = check_login_attempts(username)
+        if not can_attempt:
+            flash(error_message, 'error')
+            return render_template('login.html', theme='light')
+        
         conn = get_db_connection()
         user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
-        conn.close()
         
         if user and check_password_hash(user['password_hash'], password):
+            # Successful login, clear any previous failed attempts
+            conn.execute('DELETE FROM login_attempts WHERE username = ?', (username,))
+            conn.commit()
+            conn.close()
+            
             user_obj = User(username)
             login_user(user_obj)
             flash('Logged in successfully!', 'success')
             return redirect(url_for('index'))
         else:
+            # Failed login, log the attempt
+            log_failed_login_attempt(username)
+            conn.close()
             flash('Invalid username or password.', 'error')
     
-    return render_template('login.html')
+    return render_template('login.html', theme='light')
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
@@ -160,7 +347,30 @@ def profile():
                 flash(f'Password update failed: {str(e)}', 'error')
     
     conn.close()
-    return render_template('profile.html', user=user)
+    return render_template('profile.html', user=user, theme=get_user_theme())
+
+@app.route('/delete_account', methods=['POST'])
+@login_required
+def delete_account():
+    username = current_user.username
+    conn = get_db_connection()
+    try:
+        conn.execute('DELETE FROM users WHERE username = ?', (username,))
+        conn.commit()
+        history_dir = os.path.join('/home/siwel/Documents/code-snippet-recommender', 'history', username)
+        if os.path.exists(history_dir):
+            shutil.rmtree(history_dir)
+        downloads_dir = os.path.join('/home/siwel/Documents/code-snippet-recommender', 'downloads', username)
+        if os.path.exists(downloads_dir):
+            shutil.rmtree(downloads_dir)
+        logout_user()
+        flash('Your account has been deleted successfully.', 'success')
+        return redirect(url_for('login'))
+    except sqlite3.Error as e:
+        flash(f'Failed to delete account: {str(e)}', 'error')
+        return redirect(url_for('profile'))
+    finally:
+        conn.close()
 
 @app.route('/analytics')
 @login_required
@@ -171,23 +381,34 @@ def analytics():
         with open(history_file, 'r') as f:
             history = json.load(f)
     
-    # Calculate analytics
     total_searches = len(history)
-    
-    # Most searched languages
     languages = [entry['language'].lower() if entry['language'] else 'any' for entry in history]
     language_counts = Counter(languages)
-    most_searched_languages = language_counts.most_common(5)  # Top 5 languages
-    
-    # Most used modes
+    most_searched_languages = language_counts.most_common(5)
     modes = [entry['mode'].lower() for entry in history]
     mode_counts = Counter(modes)
-    most_used_modes = mode_counts.most_common(5)  # Top 5 modes
+    most_used_modes = mode_counts.most_common(5)
     
     return render_template('analytics.html', 
                          total_searches=total_searches,
                          most_searched_languages=most_searched_languages,
-                         most_used_modes=most_used_modes)
+                         most_used_modes=most_used_modes,
+                         theme=get_user_theme())
+
+@app.route('/toggle_theme', methods=['POST'])
+@login_required
+def toggle_theme():
+    conn = get_db_connection()
+    current_theme = conn.execute('SELECT theme_preference FROM users WHERE username = ?', (current_user.username,)).fetchone()['theme_preference']
+    new_theme = 'dark' if current_theme == 'light' else 'light'
+    try:
+        conn.execute('UPDATE users SET theme_preference = ? WHERE username = ?', (new_theme, current_user.username))
+        conn.commit()
+    except sqlite3.Error as e:
+        flash(f'Failed to update theme: {str(e)}', 'error')
+    finally:
+        conn.close()
+    return redirect(request.referrer or url_for('index'))
 
 @app.route('/logout')
 @login_required
@@ -265,7 +486,8 @@ def index():
     
     return render_template('index.html', results=results, error=error,
                          query=query, language=language, mode=mode, top_k=top_k or '2',
-                         save_results=save_results, results_filename=results_filename)
+                         save_results=save_results, results_filename=results_filename,
+                         theme=get_user_theme())
 
 @app.route('/download/<filename>')
 @login_required
@@ -303,7 +525,8 @@ def saved_results():
     paginated_results = saved_results[start:end]
     
     return render_template('saved_results.html', saved_results=paginated_results,
-                         page=page, total_pages=total_pages)
+                         page=page, total_pages=total_pages,
+                         theme=get_user_theme())
 
 @app.route('/delete_result/<filename>', methods=['POST'])
 @login_required
@@ -362,7 +585,8 @@ def search_history():
     return render_template('search_history.html', history=paginated_history, sort_by=sort_by,
                          filter_language=filter_language, filter_mode=filter_mode,
                          languages=languages, modes=modes,
-                         page=page, total_pages=total_pages)
+                         page=page, total_pages=total_pages,
+                         theme=get_user_theme())
 
 @app.route('/export_search_history')
 @login_required

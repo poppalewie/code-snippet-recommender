@@ -13,6 +13,8 @@
                 <p>Welcome, {{ current_user.username }}! 
                     <a href="{{ url_for('search_history') }}" class="btn btn-outline-primary btn-sm">Search History</a>
                     <a href="{{ url_for('saved_results') }}" class="btn btn-outline-primary btn-sm">Saved Results</a>
+                    <a href="{{ url_for('profile') }}" class="btn btn-outline-primary btn-sm">Profile</a>
+                    <a href="{{ url_for('analytics') }}" class="btn btn-outline-primary btn-sm">Analytics</a>
                     <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">Logout</a>
                 </p>
             {% else %}

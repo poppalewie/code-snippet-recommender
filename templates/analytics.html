@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - Code Snippet Recommender</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="user-info mb-4">
+            <p>Welcome, {{ current_user.username }}! 
+                <a href="{{ url_for('index') }}" class="btn btn-outline-primary btn-sm">Back to Recommender</a>
+                <a href="{{ url_for('search_history') }}" class="btn btn-outline-primary btn-sm">Search History</a>
+                <a href="{{ url_for('saved_results') }}" class="btn btn-outline-primary btn-sm">Saved Results</a>
+                <a href="{{ url_for('profile') }}" class="btn btn-outline-primary btn-sm">Profile</a>
+                <a href="{{ url_for('analytics') }}" class="btn btn-outline-primary btn-sm active">Analytics</a>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">Logout</a>
+            </p>
+        </div>
+
+        <h1>Search History Analytics</h1>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Overview</h5>
+                <p><strong>Total Searches:</strong> {{ total_searches }}</p>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">Most Searched Languages (Top 5)</h5>
+                        {% if most_searched_languages %}
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Language</th>
+                                        <th>Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for lang, count in most_searched_languages %}
+                                        <tr>
+                                            <td>{{ lang | capitalize }}</td>
+                                            <td>{{ count }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% else %}
+                            <p>No language data available.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">Most Used Modes (Top 5)</h5>
+                        {% if most_used_modes %}
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Mode</th>
+                                        <th>Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for mode, count in most_used_modes %}
+                                        <tr>
+                                            <td>{{ mode | capitalize }}</td>
+                                            <td>{{ count }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% else %}
+                            <p>No mode data available.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -9,6 +9,7 @@ from datetime import datetime
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 from math import ceil
+from collections import Counter
 
 app = Flask(__name__, template_folder='/home/siwel/Documents/code-snippet-recommender/templates')
 app.secret_key = 'supersecretkey'
@@ -26,6 +27,15 @@ def init_db():
                 password_hash TEXT NOT NULL
             )
         ''')
+        try:
+            cursor.execute('ALTER TABLE users ADD COLUMN created_at TEXT')
+        except sqlite3.OperationalError:
+            pass
+        cursor.execute('''
+            UPDATE users
+            SET created_at = ?
+            WHERE created_at IS NULL
+        ''', (datetime.now().strftime('%Y-%m-%d %H:%M:%S'),))
         conn.commit()
 
 # Call init_db when the app starts
@@ -81,8 +91,10 @@ def register():
             return render_template('register.html')
         
         password_hash = generate_password_hash(password)
+        created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         try:
-            conn.execute('INSERT INTO users (username, password_hash) VALUES (?, ?)', (username, password_hash))
+            conn.execute('INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)', 
+                       (username, password_hash, created_at))
             conn.commit()
             flash('Registration successful! Please log in.', 'success')
             return redirect(url_for('login'))
@@ -117,6 +129,65 @@ def login():
             flash('Invalid username or password.', 'error')
     
     return render_template('login.html')
+
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    conn = get_db_connection()
+    user = conn.execute('SELECT * FROM users WHERE username = ?', (current_user.username,)).fetchone()
+    
+    if request.method == 'POST':
+        old_password = request.form.get('old_password')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        
+        if not old_password or not new_password or not confirm_password:
+            flash('All fields are required.', 'error')
+        elif not check_password_hash(user['password_hash'], old_password):
+            flash('Old password is incorrect.', 'error')
+        elif new_password != confirm_password:
+            flash('New password and confirmation do not match.', 'error')
+        elif len(new_password) < 6:
+            flash('New password must be at least 6 characters.', 'error')
+        else:
+            new_password_hash = generate_password_hash(new_password)
+            try:
+                conn.execute('UPDATE users SET password_hash = ? WHERE username = ?', 
+                           (new_password_hash, current_user.username))
+                conn.commit()
+                flash('Password updated successfully!', 'success')
+            except sqlite3.Error as e:
+                flash(f'Password update failed: {str(e)}', 'error')
+    
+    conn.close()
+    return render_template('profile.html', user=user)
+
+@app.route('/analytics')
+@login_required
+def analytics():
+    history_file = os.path.join('/home/siwel/Documents/code-snippet-recommender', 'history', current_user.username, 'history.json')
+    history = []
+    if os.path.exists(history_file):
+        with open(history_file, 'r') as f:
+            history = json.load(f)
+    
+    # Calculate analytics
+    total_searches = len(history)
+    
+    # Most searched languages
+    languages = [entry['language'].lower() if entry['language'] else 'any' for entry in history]
+    language_counts = Counter(languages)
+    most_searched_languages = language_counts.most_common(5)  # Top 5 languages
+    
+    # Most used modes
+    modes = [entry['mode'].lower() for entry in history]
+    mode_counts = Counter(modes)
+    most_used_modes = mode_counts.most_common(5)  # Top 5 modes
+    
+    return render_template('analytics.html', 
+                         total_searches=total_searches,
+                         most_searched_languages=most_searched_languages,
+                         most_used_modes=most_used_modes)
 
 @app.route('/logout')
 @login_required
@@ -223,7 +294,6 @@ def saved_results():
                 }
                 saved_results.append(metadata)
     
-    # Pagination for saved results
     ITEMS_PER_PAGE = 10
     page = request.args.get('page', 1, type=int)
     total_items = len(saved_results)
@@ -278,7 +348,6 @@ def search_history():
     elif sort_by == 'num_results_desc':
         filtered_history.sort(key=lambda x: x['num_results'], reverse=True)
     
-    # Pagination for search history
     ITEMS_PER_PAGE = 10
     page = request.args.get('page', 1, type=int)
     total_items = len(filtered_history)

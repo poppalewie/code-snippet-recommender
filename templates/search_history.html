@@ -11,7 +11,10 @@
         <div class="user-info mb-4">
             <p>Welcome, {{ current_user.username }}! 
                 <a href="{{ url_for('index') }}" class="btn btn-outline-primary btn-sm">Back to Recommender</a>
+                <a href="{{ url_for('search_history') }}" class="btn btn-outline-primary btn-sm active">Search History</a>
                 <a href="{{ url_for('saved_results') }}" class="btn btn-outline-primary btn-sm">Saved Results</a>
+                <a href="{{ url_for('profile') }}" class="btn btn-outline-primary btn-sm">Profile</a>
+                <a href="{{ url_for('analytics') }}" class="btn btn-outline-primary btn-sm">Analytics</a>
                 <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">Logout</a>
             </p>
         </div>
@@ -101,13 +104,12 @@
                     {% endfor %}
                 </tbody>
             </table>
-            <!-- Pagination Controls -->
             {% if total_pages > 1 %}
                 <nav aria-label="Search history pagination">
                     <ul class="pagination justify-content-center">
                         <li class="page-item {% if page == 1 %}disabled{% endif %}">
                             <a class="page-link" href="{{ url_for('search_history', page=page-1, sort_by=sort_by, filter_language=filter_language, filter_mode=filter_mode) }}" aria-label="Previous">
-                                <span aria-hidden="true">&laquo; Previous</span>
+                                <span aria-hidden="true">« Previous</span>
                             </a>
                         </li>
                         {% for p in range(1, total_pages + 1) %}
@@ -117,7 +119,7 @@
                         {% endfor %}
                         <li class="page-item {% if page == total_pages %}disabled{% endif %}">
                             <a class="page-link" href="{{ url_for('search_history', page=page+1, sort_by=sort_by, filter_language=filter_language, filter_mode=filter_mode) }}" aria-label="Next">
-                                <span aria-hidden="true">Next &raquo;</span>
+                                <span aria-hidden="true">Next »</span>
                             </a>
                         </li>
                     </ul>
